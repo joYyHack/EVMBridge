@@ -10,23 +10,20 @@ import "../interfaces/IERC20SafeHandler.sol";
 import "../ERC20/ERC20Safe.sol";
 
 contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
-    address immutable BRIDGE_ADDRESS;
+    address public immutable BRIDGE_ADDRESS;
 
     struct TokenInfo {
         address sourceToken;
         TokenType tokenType;
     }
 
-    mapping(address => TokenInfo) public tokenInfos;
     mapping(address => mapping(address => uint256)) _depositedAmount;
+    mapping(address => TokenInfo) public tokenInfos;
+    // token from opposite chain => token from current chain
+    mapping(address => address) public tokenPairs;
 
     modifier tokenIsValid(address _token, TokenType _tokenType) {
         TokenInfo memory token = tokenInfos[_token];
-
-        require(
-            token.tokenType == _tokenType,
-            "ERC20SafeHandler: Token type mismatch"
-        );
 
         require(
             !(_tokenType == TokenType.Native &&
@@ -78,13 +75,17 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
         // if wrapped and exists - mint, if wrapped and doesn't exist - create and mint
         if (_tokenType == TokenType.Wrapped) {
             address wrappedToken = _token;
-            if (_token == address(0)) {
+            if (
+                _token == address(0) && tokenPairs[_sourceToken] == address(0)
+            ) {
                 wrappedToken = address(new WrappedERC20(_name, _symbol));
                 tokenInfos[wrappedToken] = TokenInfo(_sourceToken, _tokenType);
+                tokenPairs[_sourceToken] = wrappedToken;
             }
 
             require(
-                tokenInfos[wrappedToken].sourceToken == _sourceToken,
+                tokenInfos[wrappedToken].sourceToken == _sourceToken &&
+                    tokenPairs[_sourceToken] == wrappedToken,
                 "ERC20SafeHandler: Source token doesn't match provided token from opposite chain"
             );
 
