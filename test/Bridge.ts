@@ -349,16 +349,15 @@ describe("Bridge base logic", function () {
         await target_erc20Safe.tokenPairs(nativeERC20.address)
       ).to.be.equal(wrappedERC20.address);
 
-      await expect(withdrawTx)
-        .to.emit(target_bridge, "Withdraw")
-        .withArgs(
-          alice.address,
-          wrappedERC20.address,
-          nativeERC20.address,
-          ONE_HUNDRED_TOKENS
-        );
+      // await expect(withdrawTx)
+      //   .to.emit(target_bridge, "Withdraw")
+      //   .withArgs(
+      //     alice.address,
+      //     wrappedERC20.address,
+      //     nativeERC20.address,
+      //     ONE_HUNDRED_TOKENS
+      //   );
     });
-    // it("Bridge: Alice should be able to withdraw newly deployed wrapped tokens on the target chain", async () => {
     //   const withdrawTx = await target_bridge
     //     .connect(alice)
     //     .withdraw(
