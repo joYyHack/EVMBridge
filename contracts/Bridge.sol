@@ -33,7 +33,7 @@ contract Bridge is IBridge, AccessControl {
     ) external {
         require(
             address(safeHandler) != address(0),
-            "Brdige: erc20 safe handler is not set"
+            "Bridge: erc20 safe handler is not set yet"
         );
         require(_amount > 0, "Bridge: amount can not be zero");
         require(
@@ -81,6 +81,7 @@ contract Bridge is IBridge, AccessControl {
             _symbol
         );
 
-        emit Withdraw(_msgSender(), _token, _sourceToken, _amount);
+        // if _token initially is zero address then it is deployed but new address is not returned - need to fix
+        //emit Withdraw(_msgSender(), _token, _sourceToken, _amount);
     }
 }
