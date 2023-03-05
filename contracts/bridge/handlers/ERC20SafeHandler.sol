@@ -12,21 +12,29 @@ import "../ERC20/ERC20Safe.sol";
 contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
     address public immutable BRIDGE_ADDRESS;
 
+    // source token for token type - native is address(0)
     struct TokenInfo {
         address sourceToken;
         TokenType tokenType;
     }
 
+    // owner => token address => amount
     mapping(address => mapping(address => uint256)) _depositedAmount;
+    // token from current chain => token token info
     mapping(address => TokenInfo) public tokenInfos;
     // token from opposite chain => token from current chain
-    mapping(address => address) public tokenPairs;
+    mapping(address => address) public tokenReversePairs;
 
     modifier tokenIsValid(address _token, TokenType _tokenType) {
         TokenInfo memory token = tokenInfos[_token];
 
         require(
-            !(_tokenType == TokenType.Native &&
+            token.tokenType == _tokenType,
+            "ERC20SafeHandler: Token type mismatch"
+        );
+
+        require(
+            !(token.tokenType == TokenType.Native &&
                 token.sourceToken != address(0)),
             "ERC20SafeHandler: Token can not be native and has a source token at the same time"
         );
@@ -49,58 +57,59 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
     function deposit(
         address _owner,
         address _tokenAddress,
-        uint256 _amount,
-        TokenType _tokenType
-    ) external onlyBridge tokenIsValid(_tokenAddress, _tokenType) {
-        if (_tokenType == TokenType.Native) {
-            _depositedAmount[_owner][_tokenAddress] += _amount;
-            _lock(_owner, _tokenAddress, _amount);
-        } else {
-            _burn(_owner, _tokenAddress, _amount);
-        }
-
+        uint256 _amount
+    ) external onlyBridge tokenIsValid(_tokenAddress, TokenType.Native) {
+        _depositedAmount[_owner][_tokenAddress] += _amount;
         TokenInfo storage token = tokenInfos[_tokenAddress];
-        token.tokenType = _tokenType;
+        token.tokenType = TokenType.Native;
+
+        _lock(_owner, _tokenAddress, _amount);
+    }
+
+    function burn(
+        address _owner,
+        address _tokenAddress,
+        uint256 _amount
+    ) external onlyBridge tokenIsValid(_tokenAddress, TokenType.Wrapped) {
+        _burn(_owner, _tokenAddress, _amount);
+    }
+
+    function release(
+        address _to,
+        address _token,
+        uint256 _amount
+    ) external onlyBridge tokenIsValid(_token, TokenType.Native) {
+        require(
+            _depositedAmount[_to][_token] >= _amount,
+            "ERC20SafeHandler: Locked amount is lower than the provided"
+        );
+
+        _depositedAmount[_to][_token] -= _amount;
+        _release(_to, _token, _amount);
     }
 
     function withdraw(
         address _to,
-        address _token,
         address _sourceToken,
-        uint256 _amount,
-        TokenType _tokenType,
-        string memory _name,
-        string memory _symbol
-    ) external onlyBridge tokenIsValid(_token, _tokenType) {
-        // if wrapped and exists - mint, if wrapped and doesn't exist - create and mint
-        if (_tokenType == TokenType.Wrapped) {
-            address wrappedToken = _token;
-            if (
-                _token == address(0) && tokenPairs[_sourceToken] == address(0)
-            ) {
-                wrappedToken = address(new WrappedERC20(_name, _symbol));
-                tokenInfos[wrappedToken] = TokenInfo(_sourceToken, _tokenType);
-                tokenPairs[_sourceToken] = wrappedToken;
-            }
+        uint256 _amount
+    ) external onlyBridge tokenIsValid(_sourceToken, TokenType.Native) {
+        address wrappedToken = tokenReversePairs[_sourceToken];
+        if (wrappedToken == address(0)) {
+            wrappedToken = address(new WrappedERC20("Test", "TST"));
 
-            require(
-                tokenInfos[wrappedToken].sourceToken == _sourceToken &&
-                    tokenPairs[_sourceToken] == wrappedToken,
-                "ERC20SafeHandler: Source token doesn't match provided token from opposite chain"
+            tokenInfos[wrappedToken] = TokenInfo(
+                _sourceToken,
+                TokenType.Wrapped
             );
-
-            _mint(_to, wrappedToken, _amount);
+            tokenReversePairs[_sourceToken] = wrappedToken;
         }
 
-        // if native - release
-        if (_tokenType == TokenType.Native) {
-            require(
-                _depositedAmount[_to][_token] >= _amount,
-                "ERC20SafeHandler: Locked amount is lower than the provided"
-            );
+        require(
+            tokenInfos[wrappedToken].sourceToken == _sourceToken &&
+                tokenReversePairs[_sourceToken] == wrappedToken,
+            "ERC20SafeHandler: Source token doesn't match provided token from opposite chain"
+        );
 
-            _depositedAmount[_to][_token] -= _amount;
-            _release(_to, _token, _amount);
-        }
+        _mint(_to, wrappedToken, _amount);
     }
 }

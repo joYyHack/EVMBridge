@@ -7,17 +7,20 @@ interface IERC20SafeHandler {
     function deposit(
         address _owner,
         address _tokenAddress,
-        uint256 _amount,
-        TokenType _tokenType
+        uint256 _amount
     ) external;
+
+    function burn(
+        address _owner,
+        address _tokenAddress,
+        uint256 _amount
+    ) external;
+
+    function release(address _to, address _token, uint256 _amount) external;
 
     function withdraw(
         address _to,
-        address _token,
         address _sourceToken,
-        uint256 _amount,
-        TokenType _tokenType,
-        string memory _name,
-        string memory _symbol
+        uint256 _amount
     ) external;
 }

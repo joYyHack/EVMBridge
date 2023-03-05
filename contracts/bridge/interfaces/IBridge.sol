@@ -4,31 +4,29 @@ pragma solidity 0.8.17;
 import {TokenType} from "../utils/enums.sol";
 
 interface IBridge {
-    event Deposit(
-        address indexed owner,
-        address indexed tokenAddress,
-        uint256 amount
-    );
+    event Deposit(address indexed owner, address indexed token, uint256 amount);
 
-    event Withdraw(
-        address indexed to,
-        address indexed token,
+    event Burn(
+        address indexed owner,
+        address indexed wrappedToken,
         address indexed sourceToken,
         uint256 amount
     );
 
-    function deposit(
-        address _tokenAddress,
-        uint256 _amount,
-        TokenType _tokenType
-    ) external;
+    event Release(address indexed to, address indexed token, uint256 amount);
 
-    function withdraw(
-        address _token,
-        address _sourceToken,
-        uint256 _amount,
-        TokenType _tokenType,
-        string memory _name,
-        string memory _symbol
-    ) external;
+    event Withdraw(
+        address indexed to,
+        address indexed wrappedToken,
+        address indexed sourceToken,
+        uint256 amount
+    );
+
+    function deposit(address _token, uint256 _amount) external;
+
+    function burn(address _token, uint256 _amount) external;
+
+    function release(address _token, uint256 _amount) external;
+
+    function withdraw(address _sourceToken, uint256 _amount) external;
 }
