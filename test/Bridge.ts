@@ -12,10 +12,11 @@ import {
 } from "ethers/lib/utils";
 import { constants, BigNumber } from "ethers";
 import { faucet } from "./utils/faucet";
+import { getDepositedAmountFromERC20Safe } from "./utils/storageGetter";
 import {
   Bridge,
   ERC20SafeHandler,
-  TestERC20,
+  TestERC20 as sourceERC20,
   WrappedERC20,
 } from "../typechain-types";
 import { TokenType } from "./utils/consts&enums";
@@ -36,7 +37,8 @@ describe("Bridge base logic", function () {
   let target_bridge: Bridge;
   let target_erc20Safe: ERC20SafeHandler;
 
-  let nativeERC20: TestERC20;
+  let sourceERC20: SourceERC20;
+  let wrappedERC20: WrappedERC20;
 
   async function initialBalance() {
     for (const wallet of [bridgeOwner, alice, bob]) {
@@ -65,16 +67,16 @@ describe("Bridge base logic", function () {
 
     await source_bridge.setERC20SafeHandler(source_erc20Safe.address);
 
-    const erc20Factory = await ethers.getContractFactory("TestERC20", alice);
-    const nativeERC20 = await erc20Factory.deploy();
-    await nativeERC20.deployed();
+    const erc20Factory = await ethers.getContractFactory("SourceERC20", alice);
+    const sourceERC20 = await erc20Factory.deploy();
+    await sourceERC20.deployed();
 
-    await nativeERC20.mint(parseEther((100).toString()));
+    await sourceERC20.mint(parseEther((100).toString()));
 
     return {
       source_bridge,
       source_erc20Safe,
-      nativeERC20,
+      sourceERC20,
     };
   }
 
@@ -106,12 +108,12 @@ describe("Bridge base logic", function () {
   }
 
   async function deposited() {
-    ({ source_bridge, source_erc20Safe, nativeERC20 } =
+    ({ source_bridge, source_erc20Safe, sourceERC20 } =
       await sourceChainContractSetup());
 
     ({ target_bridge, target_erc20Safe } = await targetChainContractSetup());
 
-    const approvalTx = await nativeERC20
+    const approvalTx = await sourceERC20
       .connect(alice)
       .approve(source_erc20Safe.address, ONE_HUNDRED_TOKENS);
 
@@ -119,16 +121,81 @@ describe("Bridge base logic", function () {
 
     const depositTx = await source_bridge
       .connect(alice)
-      .deposit(nativeERC20.address, ONE_HUNDRED_TOKENS, TokenType.Native);
+      .deposit(sourceERC20.address, ONE_HUNDRED_TOKENS);
 
     await depositTx.wait();
 
-    return { source_bridge, source_erc20Safe, nativeERC20 };
+    return {
+      source_bridge,
+      source_erc20Safe,
+      sourceERC20,
+      target_bridge,
+      target_erc20Safe,
+    };
+  }
+
+  async function withdrawn() {
+    ({
+      source_bridge,
+      source_erc20Safe,
+      sourceERC20,
+      target_bridge,
+      target_erc20Safe,
+    } = await deposited());
+
+    const withdrawTx = await target_bridge
+      .connect(alice)
+      .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS);
+
+    await withdrawTx.wait();
+
+    const wrappedERC20Address = await target_erc20Safe.tokenReversePairs(
+      sourceERC20.address
+    );
+
+    const wrappedERC20: WrappedERC20 = await ethers.getContractAt(
+      "WrappedERC20",
+      wrappedERC20Address
+    );
+
+    return {
+      source_bridge,
+      source_erc20Safe,
+      sourceERC20,
+      target_bridge,
+      target_erc20Safe,
+      wrappedERC20,
+    };
+  }
+
+  async function burnt() {
+    ({
+      source_bridge,
+      source_erc20Safe,
+      sourceERC20,
+      target_bridge,
+      target_erc20Safe,
+    } = await withdrawn());
+
+    const approvalTx = await wrappedERC20
+      .connect(alice)
+      .approve(target_erc20Safe.address, ONE_HUNDRED_TOKENS);
+
+    await approvalTx.wait();
+
+    return {
+      source_bridge,
+      source_erc20Safe,
+      sourceERC20,
+      target_bridge,
+      target_erc20Safe,
+      wrappedERC20,
+    };
   }
 
   describe("Deployment", async () => {
     beforeEach(async () => {
-      ({ source_bridge, source_erc20Safe, nativeERC20 } = await loadFixture(
+      ({ source_bridge, source_erc20Safe, sourceERC20 } = await loadFixture(
         sourceChainContractSetup
       ));
     });
@@ -155,17 +222,17 @@ describe("Bridge base logic", function () {
       );
     });
     it("Test ERC20 tokens: Total supply of test erc20 tokens must be 100", async () => {
-      expect(await nativeERC20.totalSupply()).to.be.equal(ONE_HUNDRED_TOKENS);
+      expect(await sourceERC20.totalSupply()).to.be.equal(ONE_HUNDRED_TOKENS);
     });
     it("Test ERC20 tokens: Alice must have 100 test erc20 tokens", async () => {
-      expect(await nativeERC20.balanceOf(alice.address)).to.be.equal(
+      expect(await sourceERC20.balanceOf(alice.address)).to.be.equal(
         ONE_HUNDRED_TOKENS
       );
     });
   });
   describe("ERC20 Safe Handler Check", async () => {
     beforeEach(async () => {
-      ({ source_bridge, source_erc20Safe, nativeERC20 } = await loadFixture(
+      ({ source_bridge, source_erc20Safe, sourceERC20 } = await loadFixture(
         sourceChainContractSetup
       ));
     });
@@ -196,40 +263,40 @@ describe("Bridge base logic", function () {
   });
   describe("Deposit ERC20 - Source Chain", async () => {
     beforeEach(async () => {
-      ({ source_bridge, source_erc20Safe, nativeERC20 } = await loadFixture(
+      ({ source_bridge, source_erc20Safe, sourceERC20 } = await loadFixture(
         sourceChainContractSetup
       ));
     });
 
     it("Bridge: Alice should be able to deposit 100 tokens on the source chain", async () => {
-      const approvalTx = await nativeERC20
+      const approvalTx = await sourceERC20
         .connect(alice)
         .approve(source_erc20Safe.address, ONE_HUNDRED_TOKENS);
 
       await expect(approvalTx)
-        .to.emit(nativeERC20, "Approval")
+        .to.emit(sourceERC20, "Approval")
         .withArgs(alice.address, source_erc20Safe.address, ONE_HUNDRED_TOKENS);
 
       expect(
-        await nativeERC20.allowance(alice.address, source_erc20Safe.address)
+        await sourceERC20.allowance(alice.address, source_erc20Safe.address)
       ).to.be.equal(ONE_HUNDRED_TOKENS);
 
       await approvalTx.wait();
 
       const depositTx = await source_bridge
         .connect(alice)
-        .deposit(nativeERC20.address, ONE_HUNDRED_TOKENS, TokenType.Native);
+        .deposit(sourceERC20.address, ONE_HUNDRED_TOKENS);
 
       await depositTx.wait();
 
       await expect(depositTx).to.changeTokenBalances(
-        nativeERC20,
+        sourceERC20,
         [alice.address, source_erc20Safe.address],
         [ONE_HUNDRED_TOKENS.mul(-1), ONE_HUNDRED_TOKENS]
       );
 
       const { sourceToken, tokenType } = await source_erc20Safe.tokenInfos(
-        nativeERC20.address
+        sourceERC20.address
       );
 
       expect({ sourceToken, tokenType }).to.deep.equal({
@@ -237,31 +304,11 @@ describe("Bridge base logic", function () {
         tokenType: TokenType.Native,
       });
 
-      // retrieve data from private mapping _depositedAmount
-      // mapping(address => mapping(address => uint256)) _depositedAmount;
-      // keccak256(abi.encode(key, MAPPING_SLOT)) => pointer to the nested mapping;
-      // keccak256(abi.encode(key, 'pointer to the nested mapping')) => pointer to the uint256
-
-      const MAPPING_POSITION = 0; // check in ERC20SafeHandler.sol
-      // encode key value and mapping slot of the FIRST level mapping
-      let firstLevelMapping = abi.encode(
-        ["address", "uint256"],
-        [alice.address, MAPPING_POSITION]
-      );
-      // get pointer to the nested mapping
-      let nestedMappingPositon = keccak256(firstLevelMapping);
-
-      // encode key value and mapping slot of the SECOND level mapping
-      let encodedData2 = abi.encode(
-        ["address", "uint256"],
-        [nativeERC20.address, nestedMappingPositon]
-      );
-      // get pointer to the uint256
-      let pointerToResult = keccak256(encodedData2);
-
-      const depositedAmount = await provider.getStorageAt(
-        source_erc20Safe.address,
-        pointerToResult
+      const depositedAmount = await getDepositedAmountFromERC20Safe(
+        provider,
+        alice.address,
+        sourceERC20.address,
+        source_erc20Safe.address
       );
 
       expect(BigNumber.from(depositedAmount)).to.be.equal(ONE_HUNDRED_TOKENS);
@@ -281,46 +328,40 @@ describe("Bridge base logic", function () {
       await expect(
         source_bridge
           .connect(alice)
-          .deposit(nativeERC20.address, ONE_HUNDRED_TOKENS, TokenType.Native)
+          .deposit(sourceERC20.address, ONE_HUNDRED_TOKENS)
       ).revertedWith("Bridge: erc20 safe handler is not set yet");
     });
-    it("Bridge: Revert on attempt to deposit zero ERC20 tokens", async () => {
+    it("Bridge: Revert on attempt to deposit tokens with zero contract address or zero amount", async () => {
       await expect(
         source_bridge
           .connect(alice)
-          .deposit(nativeERC20.address, 0, TokenType.Native)
-      ).revertedWith("Bridge: amount can not be zero");
-    });
-    it("Bridge: Revert on attempt to deposit tokens with zero contract address", async () => {
+          .deposit(constants.AddressZero, ONE_HUNDRED_TOKENS)
+      ).revertedWith("Bridge: amount or address are incorrect");
+
       await expect(
-        source_bridge
-          .connect(alice)
-          .deposit(constants.AddressZero, ONE_HUNDRED_TOKENS, TokenType.Native)
-      ).revertedWith("Bridge: Token can not be zero address");
+        source_bridge.connect(alice).deposit(sourceERC20.address, 0)
+      ).revertedWith("Bridge: amount or address are incorrect");
     });
   });
-  describe("Withdraw ERC20 - Targe Chain", async () => {
+  describe("Withdraw ERC20 - Target Chain", async () => {
     beforeEach(async () => {
-      ({ source_bridge, source_erc20Safe, nativeERC20 } = await loadFixture(
-        deposited
-      ));
+      ({
+        source_bridge,
+        source_erc20Safe,
+        sourceERC20,
+        target_bridge,
+        target_erc20Safe,
+      } = await loadFixture(deposited));
     });
     it("Bridge: Alice should be able to withdraw newly deployed wrapped tokens on the target chain", async () => {
       const withdrawTx = await target_bridge
         .connect(alice)
-        .withdraw(
-          constants.AddressZero,
-          nativeERC20.address,
-          ONE_HUNDRED_TOKENS,
-          TokenType.Wrapped,
-          await nativeERC20.name(),
-          await nativeERC20.symbol()
-        );
+        .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS);
 
       await withdrawTx.wait();
 
-      const wrappedERC20Address = await target_erc20Safe.tokenPairs(
-        nativeERC20.address
+      const wrappedERC20Address = await target_erc20Safe.tokenReversePairs(
+        sourceERC20.address
       );
       expect(wrappedERC20Address).not.equal(constants.AddressZero);
 
@@ -331,7 +372,7 @@ describe("Bridge base logic", function () {
 
       expect(await wrappedERC20.owner()).to.be.equal(target_erc20Safe.address);
 
-      expect(await nativeERC20.balanceOf(alice.address)).to.equal(ZERO);
+      expect(await sourceERC20.balanceOf(alice.address)).to.equal(ZERO);
       expect(await wrappedERC20.balanceOf(alice.address)).to.equal(
         ONE_HUNDRED_TOKENS
       );
@@ -341,67 +382,90 @@ describe("Bridge base logic", function () {
       );
 
       expect({ sourceToken, tokenType }).to.deep.equal({
-        sourceToken: nativeERC20.address,
+        sourceToken: sourceERC20.address,
         tokenType: TokenType.Wrapped,
       });
 
       expect(
-        await target_erc20Safe.tokenPairs(nativeERC20.address)
+        await target_erc20Safe.tokenReversePairs(sourceERC20.address)
       ).to.be.equal(wrappedERC20.address);
 
-      // await expect(withdrawTx)
-      //   .to.emit(target_bridge, "Withdraw")
-      //   .withArgs(
-      //     alice.address,
-      //     wrappedERC20.address,
-      //     nativeERC20.address,
-      //     ONE_HUNDRED_TOKENS
-      //   );
+      await expect(withdrawTx).to.emit(target_bridge, "Withdraw");
     });
-    //   const withdrawTx = await target_bridge
-    //     .connect(alice)
-    //     .withdraw(
-    //       constants.AddressZero,
-    //       nativeERC20.address,
-    //       ONE_HUNDRED_TOKENS,
-    //       TokenType.Wrapped,
-    //       await nativeERC20.name(),
-    //       await nativeERC20.symbol()
-    //     );
+  });
+  describe("Burn ERC20 - Target Chain", async () => {
+    beforeEach(async () => {
+      ({
+        source_bridge,
+        source_erc20Safe,
+        sourceERC20,
+        target_bridge,
+        target_erc20Safe,
+        wrappedERC20,
+      } = await loadFixture(withdrawn));
+    });
+    it("Bridge: Alice should be able to burn wrapped tokens on the target chain", async () => {
+      const approvalTx = await wrappedERC20
+        .connect(alice)
+        .approve(target_erc20Safe.address, ONE_HUNDRED_TOKENS);
 
-    //   await withdrawTx.wait();
+      await expect(approvalTx)
+        .to.emit(wrappedERC20, "Approval")
+        .withArgs(alice.address, target_erc20Safe.address, ONE_HUNDRED_TOKENS);
 
-    //   const wrappedERC20Address = await target_erc20Safe.tokenPairs(
-    //     nativeERC20.address
-    //   );
-    //   expect(wrappedERC20Address).not.equal(constants.AddressZero);
+      expect(
+        await wrappedERC20.allowance(alice.address, target_erc20Safe.address)
+      ).to.be.equal(ONE_HUNDRED_TOKENS);
 
-    //   const wrappedERC20: WrappedERC20 = await ethers.getContractAt(
-    //     "WrappedERC20",
-    //     wrappedERC20Address
-    //   );
+      await approvalTx.wait();
 
-    //   expect(await wrappedERC20.owner()).to.be.equal(target_erc20Safe.address);
+      const burnTx = await target_bridge
+        .connect(alice)
+        .burn(wrappedERC20.address, ONE_HUNDRED_TOKENS);
 
-    //   expect(await nativeERC20.balanceOf(alice.address)).to.equal(ZERO);
-    //   expect(await wrappedERC20.balanceOf(alice.address)).to.equal(
-    //     ONE_HUNDRED_TOKENS
-    //   );
+      await burnTx.wait();
 
-    //   const { sourceToken, tokenType } = await target_erc20Safe.tokenInfos(
-    //     wrappedERC20Address
-    //   );
+      expect(await wrappedERC20.balanceOf(alice.address)).to.equal(ZERO);
 
-    //   expect({ sourceToken, tokenType }).to.deep.equal({
-    //     sourceToken: nativeERC20.address,
-    //     tokenType: TokenType.Wrapped,
-    //   });
+      await expect(burnTx).to.emit(target_bridge, "Burn");
+    });
+  });
+  describe("Release ERC20 - Source Chain", async () => {
+    beforeEach(async () => {
+      ({
+        source_bridge,
+        source_erc20Safe,
+        sourceERC20,
+        target_bridge,
+        target_erc20Safe,
+        wrappedERC20,
+      } = await loadFixture(burnt));
+    });
+    it("Bridge: Alice should be able to release native tokens on the source chain", async () => {
+      const releaseTx = await source_bridge
+        .connect(alice)
+        .release(sourceERC20.address, ONE_HUNDRED_TOKENS);
 
-    //   expect(
-    //     await target_erc20Safe.tokenPairs(nativeERC20.address)
-    //   ).to.be.equal(wrappedERC20.address);
+      await releaseTx.wait();
 
-    //   await expect(withdrawTx).to.emit(target_bridge, "Withdraw");
-    // });
+      expect(await sourceERC20.balanceOf(alice.address)).to.equal(
+        ONE_HUNDRED_TOKENS
+      );
+      expect(await sourceERC20.balanceOf(source_erc20Safe.address)).to.equal(
+        ZERO
+      );
+
+      expect(await wrappedERC20.balanceOf(alice.address)).to.equal(ZERO);
+
+      const depositedAmount = await getDepositedAmountFromERC20Safe(
+        provider,
+        alice.address,
+        sourceERC20.address,
+        source_erc20Safe.address
+      );
+      expect(BigNumber.from(depositedAmount)).to.be.equal(ZERO);
+
+      await expect(releaseTx).to.emit(source_bridge, "Release");
+    });
   });
 });
