@@ -26,7 +26,15 @@ interface IBridge {
 
     function burn(address _token, uint256 _amount) external;
 
-    function release(address _token, uint256 _amount) external;
+    function release(
+        address _sourceToken,
+        uint256 _amount,
+        bytes memory _signature
+    ) external;
 
-    function withdraw(address _sourceToken, uint256 _amount) external;
+    function withdraw(
+        address _sourceToken,
+        uint256 _amount,
+        bytes memory _signature
+    ) external;
 }
