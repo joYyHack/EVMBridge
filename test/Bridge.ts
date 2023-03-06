@@ -14,34 +14,46 @@ import { constants, BigNumber } from "ethers";
 import { faucet } from "./utils/faucet";
 import { getDepositedAmountFromERC20Safe } from "./utils/storageGetter";
 import {
+  privKey,
+  createWithdrawalRequest,
+  signWithdrawalRequest,
+} from "./utils/encoding";
+import {
   Bridge,
-  ERC20SafeHandler,
-  TestERC20 as sourceERC20,
+  IERC20SafeHandler,
+  IValidator,
+  SourceERC20,
   WrappedERC20,
 } from "../typechain-types";
 import { TokenType } from "./utils/consts&enums";
 
 describe("Bridge base logic", function () {
-  const ONE_THOUSAND_TOKENS = parseEther((1_000).toString());
+  //const ONE_THOUSAND_TOKENS = parseEther((1_000).toString());
   const ONE_HUNDRED_TOKENS = parseEther((100).toString());
   const ZERO = constants.Zero;
 
   const provider = ethers.provider;
-  const bridgeOwner = new ethers.Wallet(randomBytes(32), provider);
-  const alice = new ethers.Wallet(randomBytes(32), provider);
-  const bob = new ethers.Wallet(randomBytes(32), provider);
+  const bridgeOwner = new ethers.Wallet(privKey("666"), provider);
+  const alice = new ethers.Wallet(privKey("a11ce"), provider);
+  const bob = new ethers.Wallet(privKey("b0b"), provider);
+  const validatorWallet = new ethers.Wallet(privKey("dead"), provider);
   const randomWallet = new ethers.Wallet(randomBytes(32), provider);
 
   let source_bridge: Bridge;
-  let source_erc20Safe: ERC20SafeHandler;
+  let source_erc20Safe: IERC20SafeHandler;
+  let source_validator: IValidator;
+  let source_nonce = 0;
+
   let target_bridge: Bridge;
-  let target_erc20Safe: ERC20SafeHandler;
+  let target_erc20Safe: IERC20SafeHandler;
+  let target_validator: IValidator;
+  let target_nonce = 0;
 
   let sourceERC20: SourceERC20;
   let wrappedERC20: WrappedERC20;
 
   async function initialBalance() {
-    for (const wallet of [bridgeOwner, alice, bob]) {
+    for (const wallet of [bridgeOwner, alice, bob, validatorWallet]) {
       await faucet(wallet.address, provider);
     }
   }
@@ -65,7 +77,15 @@ describe("Bridge base logic", function () {
     );
     await source_erc20Safe.deployed();
 
+    const validatorFactory = await ethers.getContractFactory(
+      "Validator",
+      bridgeOwner
+    );
+    const source_validator = await validatorFactory.deploy();
+    await source_validator.deployed();
+
     await source_bridge.setERC20SafeHandler(source_erc20Safe.address);
+    await source_bridge.setValidator(source_validator.address);
 
     const erc20Factory = await ethers.getContractFactory("SourceERC20", alice);
     const sourceERC20 = await erc20Factory.deploy();
@@ -76,6 +96,7 @@ describe("Bridge base logic", function () {
     return {
       source_bridge,
       source_erc20Safe,
+      source_validator,
       sourceERC20,
     };
   }
@@ -99,19 +120,29 @@ describe("Bridge base logic", function () {
     );
     await target_erc20Safe.deployed();
 
+    const validatorFactory = await ethers.getContractFactory(
+      "Validator",
+      bridgeOwner
+    );
+    const target_validator = await validatorFactory.deploy();
+    await target_validator.deployed();
+
     await target_bridge.setERC20SafeHandler(target_erc20Safe.address);
+    await target_bridge.setValidator(target_validator.address);
 
     return {
       target_bridge,
       target_erc20Safe,
+      target_validator,
     };
   }
 
   async function deposited() {
-    ({ source_bridge, source_erc20Safe, sourceERC20 } =
+    ({ source_bridge, source_erc20Safe, source_validator, sourceERC20 } =
       await sourceChainContractSetup());
 
-    ({ target_bridge, target_erc20Safe } = await targetChainContractSetup());
+    ({ target_bridge, target_erc20Safe, target_validator } =
+      await targetChainContractSetup());
 
     const approvalTx = await sourceERC20
       .connect(alice)
@@ -128,9 +159,11 @@ describe("Bridge base logic", function () {
     return {
       source_bridge,
       source_erc20Safe,
+      source_validator,
       sourceERC20,
       target_bridge,
       target_erc20Safe,
+      target_validator,
     };
   }
 
@@ -138,18 +171,37 @@ describe("Bridge base logic", function () {
     ({
       source_bridge,
       source_erc20Safe,
+      source_validator,
       sourceERC20,
       target_bridge,
       target_erc20Safe,
+      target_validator,
     } = await deposited());
+
+    const request = createWithdrawalRequest(
+      validatorWallet.address,
+      target_bridge.address,
+      alice.address,
+      ONE_HUNDRED_TOKENS,
+      sourceERC20.address,
+      constants.AddressZero,
+      TokenType.Wrapped,
+      BigNumber.from(target_nonce)
+    );
+
+    const signature = await signWithdrawalRequest(
+      validatorWallet,
+      target_validator.address,
+      request
+    );
 
     const withdrawTx = await target_bridge
       .connect(alice)
-      .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS);
+      .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS, signature);
 
     await withdrawTx.wait();
 
-    const wrappedERC20Address = await target_erc20Safe.tokenReversePairs(
+    const wrappedERC20Address = await target_erc20Safe.getWrappedToken(
       sourceERC20.address
     );
 
@@ -161,9 +213,11 @@ describe("Bridge base logic", function () {
     return {
       source_bridge,
       source_erc20Safe,
+      source_validator,
       sourceERC20,
       target_bridge,
       target_erc20Safe,
+      target_validator,
       wrappedERC20,
     };
   }
@@ -172,9 +226,12 @@ describe("Bridge base logic", function () {
     ({
       source_bridge,
       source_erc20Safe,
+      source_validator,
       sourceERC20,
       target_bridge,
       target_erc20Safe,
+      target_validator,
+      wrappedERC20,
     } = await withdrawn());
 
     const approvalTx = await wrappedERC20
@@ -183,21 +240,28 @@ describe("Bridge base logic", function () {
 
     await approvalTx.wait();
 
+    const burnTx = await target_bridge
+      .connect(alice)
+      .burn(wrappedERC20.address, ONE_HUNDRED_TOKENS);
+
+    await burnTx.wait();
+
     return {
       source_bridge,
       source_erc20Safe,
+      source_validator,
       sourceERC20,
       target_bridge,
       target_erc20Safe,
+      target_validator,
       wrappedERC20,
     };
   }
 
   describe("Deployment", async () => {
     beforeEach(async () => {
-      ({ source_bridge, source_erc20Safe, sourceERC20 } = await loadFixture(
-        sourceChainContractSetup
-      ));
+      ({ source_bridge, source_erc20Safe, source_validator, sourceERC20 } =
+        await loadFixture(sourceChainContractSetup));
     });
 
     it("Access control: Owner of the bridge has the 'DEFAULT_ADMIN_ROLE' role", async () => {
@@ -212,13 +276,18 @@ describe("Bridge base logic", function () {
         .to.be.true;
     });
     it("ERC20 Safe Handler: Address of the bridge should be correct", async () => {
-      expect(await source_erc20Safe.BRIDGE_ADDRESS()).to.be.equal(
+      expect(await source_erc20Safe.getBridgeAddress()).to.be.equal(
         source_bridge.address
       );
     });
     it("Bridge: Address of the ERC20 Safe Handler should be correct", async () => {
-      expect(await source_bridge.safeHandler()).to.be.equal(
+      expect(await source_bridge.erc20Safe()).to.be.equal(
         source_erc20Safe.address
+      );
+    });
+    it("Bridge: Address of the validator should be correct", async () => {
+      expect(await source_bridge.validator()).to.be.equal(
+        source_validator.address
       );
     });
     it("Test ERC20 tokens: Total supply of test erc20 tokens must be 100", async () => {
@@ -230,27 +299,36 @@ describe("Bridge base logic", function () {
       );
     });
   });
-  describe("ERC20 Safe Handler Check", async () => {
+  describe("ERC20 Safe Handler and Validator Check", async () => {
     beforeEach(async () => {
       ({ source_bridge, source_erc20Safe, sourceERC20 } = await loadFixture(
         sourceChainContractSetup
       ));
     });
 
-    it("Access control: Only BRIDGE MANAGER should be able to change ERC20 safe handler", async () => {
+    it("Access control: Only BRIDGE MANAGER should be able to change ERC20 safe handler or validator", async () => {
       expect(
         await source_bridge
           .connect(bridgeOwner)
           .setERC20SafeHandler(randomWallet.address)
       ).not.reverted;
 
-      expect(await source_bridge.safeHandler()).to.be.equal(
-        randomWallet.address
-      );
+      expect(
+        await source_bridge
+          .connect(bridgeOwner)
+          .setValidator(randomWallet.address)
+      ).not.reverted;
+
+      expect(await source_bridge.erc20Safe()).to.be.equal(randomWallet.address);
+      expect(await source_bridge.validator()).to.be.equal(randomWallet.address);
     });
-    it("Access control: Should not allow to change ERC20 safe handler for non BRIDGE MANAGER", async () => {
+    it("Access control: Should not allow to change ERC20 safe handler or validator for non BRIDGE MANAGER", async () => {
       await expect(
         source_bridge.connect(bob).setERC20SafeHandler(constants.AddressZero)
+      ).to.be.reverted;
+
+      await expect(
+        source_bridge.connect(bob).setValidator(constants.AddressZero)
       ).to.be.reverted;
 
       // Doesn't work but needs to. Need to investigate
@@ -295,7 +373,7 @@ describe("Bridge base logic", function () {
         [ONE_HUNDRED_TOKENS.mul(-1), ONE_HUNDRED_TOKENS]
       );
 
-      const { sourceToken, tokenType } = await source_erc20Safe.tokenInfos(
+      const { sourceToken, tokenType } = await source_erc20Safe.getTokenInfo(
         sourceERC20.address
       );
 
@@ -331,16 +409,16 @@ describe("Bridge base logic", function () {
           .deposit(sourceERC20.address, ONE_HUNDRED_TOKENS)
       ).revertedWith("Bridge: erc20 safe handler is not set yet");
     });
-    it("Bridge: Revert on attempt to deposit tokens with zero contract address or zero amount", async () => {
+    it("ERC20SafeHandler: Revert on attempt to deposit tokens with zero contract address or zero amount", async () => {
       await expect(
         source_bridge
           .connect(alice)
           .deposit(constants.AddressZero, ONE_HUNDRED_TOKENS)
-      ).revertedWith("Bridge: amount or address are incorrect");
+      ).revertedWith("ERC20SafeHandler: zero address");
 
       await expect(
         source_bridge.connect(alice).deposit(sourceERC20.address, 0)
-      ).revertedWith("Bridge: amount or address are incorrect");
+      ).revertedWith("ERC20SafeHandler: token amount has to be greater than 0");
     });
   });
   describe("Withdraw ERC20 - Target Chain", async () => {
@@ -348,19 +426,39 @@ describe("Bridge base logic", function () {
       ({
         source_bridge,
         source_erc20Safe,
+        source_validator,
         sourceERC20,
         target_bridge,
         target_erc20Safe,
+        target_validator,
       } = await loadFixture(deposited));
     });
     it("Bridge: Alice should be able to withdraw newly deployed wrapped tokens on the target chain", async () => {
+      // assume that validator checked all conditions and everything is fine
+      const request = createWithdrawalRequest(
+        validatorWallet.address,
+        target_bridge.address,
+        alice.address,
+        ONE_HUNDRED_TOKENS,
+        sourceERC20.address,
+        constants.AddressZero,
+        TokenType.Wrapped,
+        BigNumber.from(target_nonce)
+      );
+
+      const signature = await signWithdrawalRequest(
+        validatorWallet,
+        target_validator.address,
+        request
+      );
+
       const withdrawTx = await target_bridge
         .connect(alice)
-        .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS);
+        .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS, signature);
 
       await withdrawTx.wait();
 
-      const wrappedERC20Address = await target_erc20Safe.tokenReversePairs(
+      const wrappedERC20Address = await target_erc20Safe.getWrappedToken(
         sourceERC20.address
       );
       expect(wrappedERC20Address).not.equal(constants.AddressZero);
@@ -377,7 +475,7 @@ describe("Bridge base logic", function () {
         ONE_HUNDRED_TOKENS
       );
 
-      const { sourceToken, tokenType } = await target_erc20Safe.tokenInfos(
+      const { sourceToken, tokenType } = await target_erc20Safe.getTokenInfo(
         wrappedERC20Address
       );
 
@@ -387,7 +485,7 @@ describe("Bridge base logic", function () {
       });
 
       expect(
-        await target_erc20Safe.tokenReversePairs(sourceERC20.address)
+        await target_erc20Safe.getWrappedToken(sourceERC20.address)
       ).to.be.equal(wrappedERC20.address);
 
       await expect(withdrawTx).to.emit(target_bridge, "Withdraw");
@@ -398,9 +496,11 @@ describe("Bridge base logic", function () {
       ({
         source_bridge,
         source_erc20Safe,
+        source_validator,
         sourceERC20,
         target_bridge,
         target_erc20Safe,
+        target_validator,
         wrappedERC20,
       } = await loadFixture(withdrawn));
     });
@@ -435,16 +535,36 @@ describe("Bridge base logic", function () {
       ({
         source_bridge,
         source_erc20Safe,
+        source_validator,
         sourceERC20,
         target_bridge,
         target_erc20Safe,
+        target_validator,
         wrappedERC20,
       } = await loadFixture(burnt));
     });
     it("Bridge: Alice should be able to release native tokens on the source chain", async () => {
+      // assume that validator checked all conditions and everything is fine
+      const request = createWithdrawalRequest(
+        validatorWallet.address,
+        source_bridge.address,
+        alice.address,
+        ONE_HUNDRED_TOKENS,
+        sourceERC20.address,
+        constants.AddressZero,
+        TokenType.Native,
+        BigNumber.from(source_nonce)
+      );
+
+      const signature = await signWithdrawalRequest(
+        validatorWallet,
+        source_validator.address,
+        request
+      );
+
       const releaseTx = await source_bridge
         .connect(alice)
-        .release(sourceERC20.address, ONE_HUNDRED_TOKENS);
+        .release(sourceERC20.address, ONE_HUNDRED_TOKENS, signature);
 
       await releaseTx.wait();
 
