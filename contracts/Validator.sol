@@ -36,7 +36,7 @@ contract Validator is IValidator, EIP712, Context {
         bytes32 digest = _hashTypedDataV4(_hash(_req));
         address signer = ECDSA.recover(digest, _sig);
         require(
-            signer == VALIDATOR_ADDRESS,
+            signer == VALIDATOR_ADDRESS && _nonces[_req.from] == _req.nonce,
             "Validator: signature does not match request"
         );
         require(
