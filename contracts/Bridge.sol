@@ -67,7 +67,7 @@ contract Bridge is IBridge, AccessControl {
         address _sourceToken,
         uint256 _amount,
         bytes memory _signature
-    ) external erc20SafeIsSet {
+    ) external erc20SafeIsSet validatorIsSet {
         IValidator.WithdrawalRequest memory req = _createRequest(
             _sourceToken,
             _amount,

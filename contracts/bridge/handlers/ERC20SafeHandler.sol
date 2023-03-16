@@ -91,8 +91,13 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
         tokenAndAmountAreValid(_token, _amount)
     {
         _depositedAmount[_owner][_token] += _amount;
-        TokenInfo storage token = _tokenInfos[_token];
-        token.tokenType = TokenType.Native;
+
+        //TODO: do I need to explicitly define struct in storage to modify it?
+        // _tokenInfos[_token] <- this expression returns pointer to the struct
+
+        // TokenInfo storage token = _tokenInfos[_token];
+        // token.tokenType = TokenType.Native;
+        _tokenInfos[_token].tokenType = TokenType.Native;
 
         _lock(_owner, _token, _amount);
     }
