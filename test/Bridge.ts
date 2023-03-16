@@ -1,23 +1,8 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { BigNumber, constants } from "ethers";
+import { parseEther, randomBytes } from "ethers/lib/utils";
 import { ethers } from "hardhat";
-import {
-  parseEther,
-  randomBytes,
-  keccak256,
-  toUtf8Bytes,
-  defaultAbiCoder as abi,
-  concat,
-} from "ethers/lib/utils";
-import { constants, BigNumber } from "ethers";
-import { faucet } from "./utils/faucet";
-import { getDepositedAmountFromERC20Safe } from "./utils/storageGetter";
-import {
-  privKey,
-  createWithdrawalRequest,
-  signWithdrawalRequest,
-} from "./utils/encoding";
 import {
   Bridge,
   IERC20SafeHandler,
@@ -26,6 +11,13 @@ import {
   WrappedERC20,
 } from "../typechain-types";
 import { TokenType } from "./utils/consts&enums";
+import {
+  createWithdrawalRequest,
+  privKey,
+  signWithdrawalRequest,
+} from "./utils/encoding";
+import { faucet } from "./utils/faucet";
+import { getDepositedAmountFromERC20Safe } from "./utils/storageGetter";
 
 describe("Bridge base logic", function () {
   //const ONE_THOUSAND_TOKENS = parseEther((1_000).toString());
