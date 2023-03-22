@@ -176,6 +176,8 @@ describe("Bridge base logic", function () {
       alice.address,
       ONE_HUNDRED_TOKENS,
       sourceERC20.address,
+      await sourceERC20.symbol(),
+      await sourceERC20.name(),
       constants.AddressZero,
       TokenType.Wrapped,
       BigNumber.from(target_nonce)
@@ -189,7 +191,13 @@ describe("Bridge base logic", function () {
 
     const withdrawTx = await target_bridge
       .connect(alice)
-      .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS, signature);
+      .withdraw(
+        sourceERC20.address,
+        await sourceERC20.symbol(),
+        await sourceERC20.name(),
+        ONE_HUNDRED_TOKENS,
+        signature
+      );
 
     await withdrawTx.wait();
 
@@ -433,6 +441,8 @@ describe("Bridge base logic", function () {
         alice.address,
         ONE_HUNDRED_TOKENS,
         sourceERC20.address,
+        await sourceERC20.symbol(),
+        await sourceERC20.name(),
         constants.AddressZero,
         TokenType.Wrapped,
         BigNumber.from(target_nonce)
@@ -446,7 +456,13 @@ describe("Bridge base logic", function () {
 
       const withdrawTx = await target_bridge
         .connect(alice)
-        .withdraw(sourceERC20.address, ONE_HUNDRED_TOKENS, signature);
+        .withdraw(
+          sourceERC20.address,
+          await sourceERC20.symbol(),
+          await sourceERC20.name(),
+          ONE_HUNDRED_TOKENS,
+          signature
+        );
 
       await withdrawTx.wait();
 
@@ -543,6 +559,8 @@ describe("Bridge base logic", function () {
         alice.address,
         ONE_HUNDRED_TOKENS,
         sourceERC20.address,
+        await sourceERC20.symbol(),
+        await sourceERC20.name(),
         constants.AddressZero,
         TokenType.Native,
         BigNumber.from(source_nonce)

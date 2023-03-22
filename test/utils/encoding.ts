@@ -1,6 +1,7 @@
 import { BigNumber, Wallet } from "ethers";
 import { IValidator } from "../../typechain-types";
 import { TokenType } from "./consts&enums";
+import { _TypedDataEncoder } from "@ethersproject/hash";
 
 type WithdrawalRequest = IValidator.WithdrawalRequestStruct;
 
@@ -14,6 +15,8 @@ export const createWithdrawalRequest = (
   from: string,
   amount: BigNumber,
   sourceToken: string,
+  sourceTokenSymbol: string,
+  sourceTokenName: string,
   wrappedToken: string,
   withdrawalTokenType: TokenType,
   nonce: BigNumber
@@ -24,6 +27,8 @@ export const createWithdrawalRequest = (
     from,
     amount,
     sourceToken,
+    sourceTokenSymbol,
+    sourceTokenName,
     wrappedToken,
     withdrawalTokenType,
     nonce,
@@ -50,6 +55,8 @@ export const signWithdrawalRequest = async (
       { name: "from", type: "address" },
       { name: "amount", type: "uint256" },
       { name: "sourceToken", type: "address" },
+      { name: "sourceTokenSymbol", type: "string" },
+      { name: "sourceTokenName", type: "string" },
       { name: "wrappedToken", type: "address" },
       { name: "withdrawalTokenType", type: "uint8" },
       { name: "nonce", type: "uint256" },
