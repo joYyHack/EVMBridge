@@ -137,6 +137,8 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
     function withdraw(
         address _to,
         address _sourceToken,
+        string memory _sourceTokenSymbol,
+        string memory _sourceTokenName,
         uint256 _amount
     )
         external
@@ -146,7 +148,9 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
     {
         address wrappedToken = _tokenSourceMap[_sourceToken];
         if (wrappedToken == address(0)) {
-            wrappedToken = address(new WrappedERC20("Test", "TST"));
+            wrappedToken = address(
+                new WrappedERC20(_sourceTokenName, _sourceTokenSymbol)
+            );
 
             _tokenInfos[wrappedToken] = TokenInfo(
                 _sourceToken,

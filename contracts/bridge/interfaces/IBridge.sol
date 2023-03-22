@@ -34,6 +34,8 @@ interface IBridge {
 
     function withdraw(
         address _sourceToken,
+        string memory _sourceTokenSymbol,
+        string memory _sourceTokenName,
         uint256 _amount,
         bytes memory _signature
     ) external;

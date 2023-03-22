@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import "./bridge/interfaces/IBridge.sol";
 import "./bridge/interfaces/IERC20SafeHandler.sol";
@@ -70,6 +71,8 @@ contract Bridge is IBridge, AccessControl {
     ) external erc20SafeIsSet validatorIsSet {
         IValidator.WithdrawalRequest memory req = _createRequest(
             _sourceToken,
+            IERC20Metadata(_sourceToken).symbol(),
+            IERC20Metadata(_sourceToken).name(),
             _amount,
             TokenType.Native
         );
@@ -82,18 +85,28 @@ contract Bridge is IBridge, AccessControl {
 
     function withdraw(
         address _sourceToken,
+        string memory _sourceTokenSymbol,
+        string memory _sourceTokenName,
         uint256 _amount,
         bytes memory _signature
     ) external erc20SafeIsSet validatorIsSet {
         IValidator.WithdrawalRequest memory req = _createRequest(
             _sourceToken,
+            _sourceTokenSymbol,
+            _sourceTokenName,
             _amount,
             TokenType.Wrapped
         );
 
         validator.verify(req, _signature);
 
-        erc20Safe.withdraw(_msgSender(), _sourceToken, _amount);
+        erc20Safe.withdraw(
+            _msgSender(),
+            _sourceToken,
+            _sourceTokenSymbol,
+            _sourceTokenName,
+            _amount
+        );
 
         emit Withdraw(
             _msgSender(),
@@ -105,6 +118,8 @@ contract Bridge is IBridge, AccessControl {
 
     function _createRequest(
         address _sourceToken,
+        string memory _sourceTokenSymbol,
+        string memory _sourceTokenName,
         uint256 _amount,
         TokenType _tokenType
     ) internal view returns (IValidator.WithdrawalRequest memory) {
@@ -114,6 +129,8 @@ contract Bridge is IBridge, AccessControl {
                 _msgSender(),
                 _amount,
                 _sourceToken,
+                _sourceTokenSymbol,
+                _sourceTokenName,
                 erc20Safe.getWrappedToken(_sourceToken),
                 _tokenType
             );

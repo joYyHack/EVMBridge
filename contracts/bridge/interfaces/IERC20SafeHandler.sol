@@ -38,6 +38,8 @@ interface IERC20SafeHandler {
     function withdraw(
         address _to,
         address _sourceToken,
+        string memory _sourceTokenSymbol,
+        string memory _sourceTokenName,
         uint256 _amount
     ) external;
 }
