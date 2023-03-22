@@ -3,29 +3,31 @@ pragma solidity 0.8.17;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import "./bridge/interfaces/IBridge.sol";
 import "./bridge/interfaces/IERC20SafeHandler.sol";
+import "./bridge/interfaces/IValidator.sol";
 import "./bridge/utils/constants.sol";
 import {TokenType} from "./bridge/utils/enums.sol";
 
 contract Bridge is IBridge, AccessControl {
-    IERC20SafeHandler public safeHandler;
+    IERC20SafeHandler public erc20Safe;
+    IValidator public validator;
     bytes32 public constant BRIDGE_MANAGER = keccak256("BRIDGE_MANAGER");
 
-    modifier safeHandlerIsSet() {
+    modifier erc20SafeIsSet() {
         require(
-            address(safeHandler) != address(0),
+            address(erc20Safe) != address(0),
             "Bridge: erc20 safe handler is not set yet"
         );
         _;
     }
-    modifier tokenAndAmountAreValid(address _token, uint256 _amount) {
+    modifier validatorIsSet() {
         require(
-            _token != address(0) && _amount > 0,
-            "Bridge: amount or address are incorrect"
+            address(validator) != address(0),
+            "Bridge: validator is not set yet"
         );
         _;
     }
@@ -38,41 +40,99 @@ contract Bridge is IBridge, AccessControl {
     function setERC20SafeHandler(
         address _safeHandler
     ) external onlyRole(BRIDGE_MANAGER) {
-        safeHandler = IERC20SafeHandler(_safeHandler);
+        erc20Safe = IERC20SafeHandler(_safeHandler);
     }
 
-    function deposit(
-        address _token,
-        uint256 _amount
-    ) external safeHandlerIsSet tokenAndAmountAreValid(_token, _amount) {
-        safeHandler.deposit(_msgSender(), _token, _amount);
+    function setValidator(
+        address _validator
+    ) external onlyRole(BRIDGE_MANAGER) {
+        validator = IValidator(_validator);
+    }
+
+    function deposit(address _token, uint256 _amount) external erc20SafeIsSet {
+        erc20Safe.deposit(_msgSender(), _token, _amount);
         emit Deposit(_msgSender(), _token, _amount);
     }
 
-    function burn(
-        address _token,
-        uint256 _amount
-    ) external safeHandlerIsSet tokenAndAmountAreValid(_token, _amount) {
-        safeHandler.burn(_msgSender(), _token, _amount);
-        // if _token initially is zero address then it is deployed but new address is not returned - need to fix
-        emit Burn(_msgSender(), _token, _token, _amount);
+    function burn(address _token, uint256 _amount) external erc20SafeIsSet {
+        erc20Safe.burn(_msgSender(), _token, _amount);
+        emit Burn(
+            _msgSender(),
+            _token,
+            erc20Safe.getTokenInfo(_token).sourceToken,
+            _amount
+        );
     }
 
     function release(
-        address _token,
-        uint256 _amount
-    ) external safeHandlerIsSet tokenAndAmountAreValid(_token, _amount) {
-        safeHandler.release(_msgSender(), _token, _amount);
-        emit Release(_msgSender(), _token, _amount);
+        address _sourceToken,
+        uint256 _amount,
+        bytes memory _signature
+    ) external erc20SafeIsSet validatorIsSet {
+        IValidator.WithdrawalRequest memory req = _createRequest(
+            _sourceToken,
+            IERC20Metadata(_sourceToken).symbol(),
+            IERC20Metadata(_sourceToken).name(),
+            _amount,
+            TokenType.Native
+        );
+
+        validator.verify(req, _signature);
+
+        erc20Safe.release(_msgSender(), _sourceToken, _amount);
+        emit Release(_msgSender(), _sourceToken, _amount);
     }
 
     function withdraw(
         address _sourceToken,
-        uint256 _amount
-    ) external safeHandlerIsSet tokenAndAmountAreValid(_sourceToken, _amount) {
-        safeHandler.withdraw(_msgSender(), _sourceToken, _amount);
+        string memory _sourceTokenSymbol,
+        string memory _sourceTokenName,
+        uint256 _amount,
+        bytes memory _signature
+    ) external erc20SafeIsSet validatorIsSet {
+        IValidator.WithdrawalRequest memory req = _createRequest(
+            _sourceToken,
+            _sourceTokenSymbol,
+            _sourceTokenName,
+            _amount,
+            TokenType.Wrapped
+        );
 
-        // if _token initially is zero address then it is deployed but new address is not returned - need to fix
-        emit Withdraw(_msgSender(), _sourceToken, _sourceToken, _amount);
+        validator.verify(req, _signature);
+
+        erc20Safe.withdraw(
+            _msgSender(),
+            _sourceToken,
+            _sourceTokenSymbol,
+            _sourceTokenName,
+            _amount
+        );
+
+        emit Withdraw(
+            _msgSender(),
+            _sourceToken,
+            erc20Safe.getWrappedToken(_sourceToken),
+            _amount
+        );
+    }
+
+    function _createRequest(
+        address _sourceToken,
+        string memory _sourceTokenSymbol,
+        string memory _sourceTokenName,
+        uint256 _amount,
+        TokenType _tokenType
+    ) internal view returns (IValidator.WithdrawalRequest memory) {
+        return
+            validator.createRequest(
+                address(this),
+                _msgSender(),
+                _amount,
+                _sourceToken,
+                _sourceTokenSymbol,
+                _sourceTokenName,
+                erc20Safe.getWrappedToken(_sourceToken),
+                _tokenType
+            );
     }
 }
