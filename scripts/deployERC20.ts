@@ -5,10 +5,7 @@ import { privKey } from "./utils/encoding";
 import { faucet } from "./utils/faucet";
 
 async function main() {
-  const provider = ethers.provider;
-
-  const alice = new ethers.Wallet(privKey("a11ce"), provider);
-  await faucet(alice.address, provider);
+  const [_, alice] = await ethers.getSigners();
 
   const erc20Factory = await ethers.getContractFactory("RandomERC20", alice);
   const ERC20 = await erc20Factory.deploy("Random", "RND");
