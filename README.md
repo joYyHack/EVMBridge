@@ -1,9 +1,17 @@
-Sepolia
-Bridge deployed at: 0x025F22Ccbe9FCEbC4dFC359E36051498eC8c9c3F
-ERC20 Safe deployed at: 0x70c0f0bDc053d86e58566Dc65105974D7d412B2C
-Validator deployed at: 0x66C394b3dDCA8B25f34D9A3C6c8291cAdA9f2383
+## Sepolia
 
-Mumbai
-Bridge deployed at: 0x025F22Ccbe9FCEbC4dFC359E36051498eC8c9c3F
-ERC20 Safe deployed at: 0x70c0f0bDc053d86e58566Dc65105974D7d412B2C
-Validator deployed at: 0x66C394b3dDCA8B25f34D9A3C6c8291cAdA9f2383
+- Bridge deployed at: 0xC2894d489618B23dB236847BaaFeF1B2Ef3938Ae
+- ERC20 Safe deployed at: 0xB1F3C795279756539E065963bD6E73bECE0B86D1
+- Validator deployed at: 0x34a230228B122B0ef4e4dd511F2b26fE9647E9F7
+
+## Mumbai
+
+- Bridge deployed at: 0xC2894d489618B23dB236847BaaFeF1B2Ef3938Ae
+- ERC20 Safe deployed at: 0xB1F3C795279756539E065963bD6E73bECE0B86D1
+- Validator deployed at: 0x34a230228B122B0ef4e4dd511F2b26fE9647E9F7
+
+## Slither
+
+```
+slither . --filter-paths "openzeppelin|console.sol" --exclude solc-version,naming-convention
+```
