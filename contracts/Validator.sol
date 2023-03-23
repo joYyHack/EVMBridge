@@ -13,7 +13,7 @@ contract Validator is IValidator, EIP712, Context {
     address constant VALIDATOR_ADDRESS =
         0xe1AB69E519d887765cF0bb51D0cFFF2264B38080;
 
-    bytes32 internal WITHDRAWAL_REQ_TYPE_HASH =
+    bytes32 internal constant WITHDRAWAL_REQ_TYPE_HASH =
         keccak256(
             abi.encodePacked(
                 "WithdrawalRequest(",
@@ -88,7 +88,7 @@ contract Validator is IValidator, EIP712, Context {
 
     function _hash(
         WithdrawalRequest memory _req
-    ) internal view returns (bytes32) {
+    ) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
