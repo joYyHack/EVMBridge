@@ -54,6 +54,10 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
     }
 
     constructor(address bridgeAddress) {
+        require(
+            bridgeAddress != address(0),
+            "ERC20SafeHandler: Bridge address is zero address"
+        );
         BRIDGE_ADDRESS = bridgeAddress;
     }
 
