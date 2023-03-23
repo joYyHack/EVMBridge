@@ -284,6 +284,20 @@ describe("Bridge base logic", function () {
       expect(await source_bridge.hasRole(BRIDGE_MANAGER, bridgeOwner.address))
         .to.be.true;
     });
+    it("ERC20 Safe Handler: Cannot deploy ERC Safe Handler with zero bridge address", async () => {
+      const erc20SafeHandlerFactory = await ethers.getContractFactory(
+        "ERC20SafeHandler",
+        bridgeOwner
+      );
+      try {
+        await erc20SafeHandlerFactory.deploy(constants.AddressZero);
+      } catch (e) {
+        const error = e as Error;
+        expect(error.message).to.contain(
+          "ERC20SafeHandler: Bridge address is zero address"
+        );
+      }
+    });
     it("ERC20 Safe Handler: Address of the bridge should be correct", async () => {
       expect(await source_erc20Safe.getBridgeAddress()).to.be.equal(
         source_bridge.address
