@@ -16,7 +16,8 @@ module.exports = {
       "BridgeExample/AllBridge2/Router.t.sol",
       "BridgeExample/AllBridge2/Structs.t.sol",
       "BridgeExample/AllBridge2/WormholeMessenger.t.sol",
-      "test/ERC20.sol"
+      "test/ERC20.sol",
+      "test/ERC20_Random.sol"
     ]
   };
   
