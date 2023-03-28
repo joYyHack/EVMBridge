@@ -17,6 +17,7 @@ interface IValidator {
         address sourceToken;
         string sourceTokenSymbol;
         string sourceTokenName;
+        bool isSourceTokenPermit;
         address wrappedToken;
         TokenType withdrawalTokenType;
         uint256 nonce;
@@ -29,6 +30,7 @@ interface IValidator {
         address _sourceToken,
         string memory _sourceTokenSymbol,
         string memory _sourceTokenName,
+        bool _isSourceTokenPermit,
         address _wrappedToken,
         TokenType _withdrawalTokenType
     ) external view returns (WithdrawalRequest memory);

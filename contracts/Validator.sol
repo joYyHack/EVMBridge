@@ -24,6 +24,7 @@ contract Validator is IValidator, EIP712, Context {
                 "address sourceToken,",
                 "string sourceTokenSymbol,",
                 "string sourceTokenName,",
+                "bool isSourceTokenPermit,",
                 "address wrappedToken,",
                 "uint8 withdrawalTokenType,",
                 "uint256 nonce",
@@ -64,6 +65,7 @@ contract Validator is IValidator, EIP712, Context {
         address _sourceToken,
         string memory _sourceTokenSymbol,
         string memory _sourceTokenName,
+        bool _isSourceTokenPermit,
         address _wrappedToken,
         TokenType _withdrawalTokenType
     ) external view returns (WithdrawalRequest memory) {
@@ -76,6 +78,7 @@ contract Validator is IValidator, EIP712, Context {
                 _sourceToken,
                 _sourceTokenSymbol,
                 _sourceTokenName,
+                _isSourceTokenPermit,
                 _wrappedToken,
                 _withdrawalTokenType,
                 _nonces[_from]
@@ -100,6 +103,7 @@ contract Validator is IValidator, EIP712, Context {
                     _req.sourceToken,
                     keccak256(bytes(_req.sourceTokenSymbol)),
                     keccak256(bytes(_req.sourceTokenName)),
+                    _req.isSourceTokenPermit,
                     _req.wrappedToken,
                     _req.withdrawalTokenType,
                     _req.nonce

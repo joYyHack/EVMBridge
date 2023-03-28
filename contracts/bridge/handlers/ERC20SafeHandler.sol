@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "hardhat/console.sol";
-
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
-
 import "../interfaces/IERC20SafeHandler.sol";
 import "../ERC20/ERC20Safe.sol";
 
@@ -143,6 +138,7 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
         address _sourceToken,
         string memory _sourceTokenSymbol,
         string memory _sourceTokenName,
+        bool _isSourceTokenPermit,
         uint256 _amount
     )
         external
@@ -152,9 +148,11 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
     {
         address wrappedToken = _tokenSourceMap[_sourceToken];
         if (wrappedToken == address(0)) {
-            wrappedToken = address(
-                new WrappedERC20(_sourceTokenName, _sourceTokenSymbol)
-            );
+            IERC20 wrappedTokenContract = _isSourceTokenPermit
+                ? new WrappedERC20Permit(_sourceTokenName, _sourceTokenSymbol)
+                : new WrappedERC20(_sourceTokenName, _sourceTokenSymbol);
+
+            wrappedToken = address(wrappedTokenContract);
 
             _tokenInfos[wrappedToken] = TokenInfo(
                 _sourceToken,
@@ -170,5 +168,17 @@ contract ERC20SafeHandler is IERC20SafeHandler, ERC20Safe, Context {
         );
 
         _mint(_to, wrappedToken, _amount);
+    }
+
+    function permit(
+        address _tokenAddress,
+        address _owner,
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external onlyBridge {
+        _permit(_tokenAddress, _owner, _amount, _deadline, _v, _r, _s);
     }
 }

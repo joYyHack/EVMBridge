@@ -40,6 +40,17 @@ interface IERC20SafeHandler {
         address _sourceToken,
         string memory _sourceTokenSymbol,
         string memory _sourceTokenName,
+        bool _isSourceTokenPermit,
         uint256 _amount
+    ) external;
+
+    function permit(
+        address _tokenAddress,
+        address _owner,
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
     ) external;
 }
