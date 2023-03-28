@@ -24,8 +24,6 @@ module.exports = {
       "test/ERC20Permit_Reenter.sol",
       "test/WrappedERC20_Reenter.sol",
       "test/WrappedERC20Permit_Reenter.sol",
-      
-
       "Validator.sol"
     ],
      configureYulOptimizer: true,
