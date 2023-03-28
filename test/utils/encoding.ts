@@ -133,11 +133,7 @@ export const signPermitRequest = async (
 
   const rawSignature = await owner._signTypedData(domain, requestType, request);
   const signature = utils.splitSignature(rawSignature);
-  if (domainName) {
-    console.log("domain", domain);
-    console.log("struct", _TypedDataEncoder.from(requestType).hash(request));
-    console.log("domain", _TypedDataEncoder.hashDomain(domain));
-  }
+
   return {
     ...request,
     v: signature.v,

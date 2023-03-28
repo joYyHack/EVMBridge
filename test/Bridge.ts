@@ -1450,8 +1450,6 @@ describe("Bridge base logic", function () {
         wrappedERC20Permit,
         ONE_HUNDRED_TOKENS
       );
-
-      // console.log("hackedERC20 address", hackedERC20.address);
       // console.log(
       //   "wrappedReenterERC20Permit address",
       //   wrappedReenterERC20Permit.address
