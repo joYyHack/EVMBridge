@@ -5,6 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract SourceERC20 is ERC20("Source", "SRC") {
     function mint(uint256 _amount) public {
-        _mint(msg.sender, _amount);
+        _mint(_msgSender(), _amount);
     }
 }

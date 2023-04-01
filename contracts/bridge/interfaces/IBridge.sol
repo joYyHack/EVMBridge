@@ -24,7 +24,25 @@ interface IBridge {
 
     function deposit(address _token, uint256 _amount) external;
 
+    function depositPermit(
+        address _token,
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external;
+
     function burn(address _token, uint256 _amount) external;
+
+    function burnPermit(
+        address _token,
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external;
 
     function release(
         address _sourceToken,
@@ -36,6 +54,7 @@ interface IBridge {
         address _sourceToken,
         string memory _sourceTokenSymbol,
         string memory _sourceTokenName,
+        bool _isSourceTokenPermit,
         uint256 _amount,
         bytes memory _signature
     ) external;

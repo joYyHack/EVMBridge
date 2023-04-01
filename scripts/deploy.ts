@@ -3,7 +3,7 @@ import { constants } from "ethers";
 import { parseEther, formatEther } from "ethers/lib/utils";
 import { privKey } from "./utils/encoding";
 import { faucet } from "./utils/faucet";
-import { SourceERC20 } from "../typechain-types";
+import { SourceERC20, SourceERC20Permit } from "../typechain-types";
 
 async function main() {
   const network = await ethers.provider.getNetwork();
@@ -49,6 +49,28 @@ async function main() {
       `Alice's balance: ${(
         await ERC20.balanceOf(alice.address)
       ).toString()} of ${await ERC20.symbol()} tokens`
+    );
+
+    const erc20PermitFactory = await ethers.getContractFactory(
+      "SourceERC20Permit",
+      alice
+    );
+    const ERC20Permit =
+      (await erc20PermitFactory.deploy()) as SourceERC20Permit;
+    await ERC20Permit.deployed();
+
+    await ERC20Permit.mint(parseEther((100).toString()));
+    await ERC20Permit.approve(erc20Safe.address, constants.MaxUint256);
+
+    console.log(
+      `ERC20Permit ${await ERC20Permit.symbol()} token deployed at: ${
+        ERC20Permit.address
+      }`
+    );
+    console.log(
+      `Alice's balance: ${(
+        await ERC20Permit.balanceOf(alice.address)
+      ).toString()} of ${await ERC20Permit.symbol()} tokens`
     );
   }
 }

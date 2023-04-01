@@ -9,9 +9,9 @@ contract WrappedERC20 is ERC20Burnable, Pausable, Ownable {
     constructor(
         string memory name,
         string memory symbol
-    ) ERC20(string.concat("wrapped_", name), string.concat("WRP_", symbol)) {}
+    ) ERC20(string.concat("Wrapped_", name), string.concat("WRP_", symbol)) {}
 
-    function mint(address _account, uint256 _amount) public onlyOwner {
+    function mint(address _account, uint256 _amount) public virtual onlyOwner {
         _mint(_account, _amount);
     }
 }

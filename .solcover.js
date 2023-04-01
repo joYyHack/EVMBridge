@@ -17,7 +17,15 @@ module.exports = {
       "BridgeExample/AllBridge2/Structs.t.sol",
       "BridgeExample/AllBridge2/WormholeMessenger.t.sol",
       "test/ERC20.sol",
-      "test/ERC20_Random.sol"
-    ]
+      "test/ERC20Permit.sol",
+      "test/ERC20_Random.sol",
+      "test/ERC20Permit_Random.sol",
+      "test/ERC20_Reenter.sol",
+      "test/ERC20Permit_Reenter.sol",
+      "test/WrappedERC20_Reenter.sol",
+      "test/WrappedERC20Permit_Reenter.sol",
+      "Validator.sol"
+    ],
+     configureYulOptimizer: true,
   };
   
