@@ -1,5 +1,5 @@
 # Bridge for the EVM compatible chains for ERC20 tokens
-> * ### The bridge is currently available on the Sepolia and Mumbai chains.  
+> * ### The bridge is currently available and deployed on the Sepolia and Mumbai chains.  
 > * ### Bridge supports [ERC20 Permits (EIP2612)](https://eips.ethereum.org/EIPS/eip-2612)
 > * ### Related projects [EVMBridge Client](https://github.com/joYyHack/EVMBridge-client) and [EVMBridge Validator](https://github.com/joYyHack/EVMBridge-validator)
 
@@ -11,11 +11,11 @@
 - [Install](#install)
 - [Usage](#usage)
 - [.ENV file](#env-file)
-- [Deploy](#deploy)
+- [Deploy scripts](#deploy)
 ## Overview
 
 The Bridge smart contract provides a bidirectional transfer of ERC20 tokens between EVM-compatible chains. This means that users can move their tokens from Chain A to Chain B and vice versa with ease. Additionally, the Bridge supports the ERC20 Permit standard (ERC2612), enabling gasless transactions by pre-approving token transfers. With the Bridge, users have greater flexibility and control over their tokens, eliminating the need to rely on centralized exchanges or custodians for transfers between chains.
-
+> The contracts in this project are used by the [EVMBridge Client](https://github.com/joYyHack/EVMBridge-client). You can use the client to visualize the interaction with the bridge. A guide on how to interact with the client can be found in the respective project.
 ## Deployments by EVM Chain
 
 <table>
