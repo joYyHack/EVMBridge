@@ -1,8 +1,8 @@
-import { BigNumber, Wallet, constants, utils } from "ethers";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { ERC20, ERC20Permit, IValidator } from "../../typechain-types";
-import { TokenType } from "./consts&enums";
 import { _TypedDataEncoder } from "@ethersproject/hash";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BigNumber, Wallet, constants, utils } from "ethers";
+import { ERC20Permit, IValidator } from "../../typechain-types";
+import { TokenType } from "./consts&enums";
 
 type WithdrawalRequest = IValidator.WithdrawalRequestStruct;
 type PermitRequest = {
@@ -127,9 +127,6 @@ export const signPermitRequest = async (
       { name: "deadline", type: "uint256" },
     ],
   };
-
-  _TypedDataEncoder.hashDomain(domain);
-  _TypedDataEncoder.from(requestType).hash(request);
 
   const rawSignature = await owner._signTypedData(domain, requestType, request);
   const signature = utils.splitSignature(rawSignature);

@@ -1,6 +1,5 @@
 import { JsonRpcProvider } from "@ethersproject/providers";
-import { keccak256, defaultAbiCoder as abi } from "ethers/lib/utils";
-import { TokenType } from "./consts&enums";
+import { defaultAbiCoder as abi, keccak256 } from "ethers/lib/utils";
 
 export const getDepositedAmountFromERC20Safe = async (
   provider: JsonRpcProvider,

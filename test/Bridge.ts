@@ -33,16 +33,15 @@ import { faucet } from "./utils/faucet";
 import { setTokenInfoForERC20Safe as getTokenInfoForERC20Safe } from "./utils/storageGetterSetter";
 
 describe("Bridge base logic", function () {
-  //const ONE_THOUSAND_TOKENS = parseEther((1_000).toString());
   const ONE_HUNDRED_TOKENS = parseEther((100).toString());
   const ZERO = constants.Zero;
 
   const provider = ethers.provider;
 
   const bridgeOwner = new ethers.Wallet(privKey("666"), provider);
+  const validatorOwner = new ethers.Wallet(privKey("dEad"), provider);
   const alice = new ethers.Wallet(privKey("a11ce"), provider);
   const bob = new ethers.Wallet(privKey("b0b"), provider);
-  const validatorOwner = new ethers.Wallet(privKey("dEad"), provider);
   const randomWallet = new ethers.Wallet(randomBytes(32), provider);
 
   let source_bridge: Bridge;
@@ -111,8 +110,8 @@ describe("Bridge base logic", function () {
     const sourceERC20Permit = await erc20PermitFactory.deploy();
     await sourceERC20Permit.deployed();
 
-    await sourceERC20.mint(parseEther((100).toString()));
-    await sourceERC20Permit.mint(parseEther((100).toString()));
+    await sourceERC20.mint(ONE_HUNDRED_TOKENS);
+    await sourceERC20Permit.mint(ONE_HUNDRED_TOKENS);
 
     const erc20ReenterFactory = await ethers.getContractFactory(
       "ReenterERC20",
@@ -1152,7 +1151,7 @@ describe("Bridge base logic", function () {
         false,
         constants.AddressZero,
         TokenType.Wrapped,
-        await target_validator.getNonce(alice.address) //BigNumber.from(source_nonce)
+        await target_validator.getNonce(alice.address)
       );
 
       const signatureZeroAmount = await signWithdrawalRequest(
@@ -1447,12 +1446,6 @@ describe("Bridge base logic", function () {
         wrappedERC20Permit,
         ONE_HUNDRED_TOKENS
       );
-      // console.log(
-      //   "wrappedReenterERC20Permit address",
-      //   wrappedReenterERC20Permit.address
-      // );
-      // console.log("wrappedERC20Permit address", wrappedERC20Permit.address);
-      // console.log("\n");
 
       const permit = await signPermitRequest(
         alice,
