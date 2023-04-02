@@ -7,7 +7,10 @@
 - [Table of Contents](#table-of-contents)
 - [Overview](#overview)
 - [Deployments](#deployments-by-evm-chain)
-- [Diagram](#diagram)
+- [Bridge structure](#bridge-structure)
+  - [Bridge parts](#bridge-consists-of-3-main-parts) 
+  - [Bridge order](#order-of-the-contracts) 
+- [User flow diagram](#user-flow-diagram)
 - [Install](#install)
 - [Usage](#usage)
 - [.ENV file](#env-file)
@@ -53,10 +56,27 @@ The Bridge smart contract provides a bidirectional transfer of ERC20 tokens betw
 
 </td></tr>
 </table>
-  
-## Diagram
+
+## Bridge structure
+#### Bridge consists of 3 main parts:
+* **Bridge** - The main contract contains basic functions such as deposit, release, withdraw, and burn, along with their respective events. The Bridge contract does not contain the logic of locking or transferring assets. Instead, it simply wraps all the functions from the Validator and ERC20Safe contracts and calls them in the correct order (i.e. verifying the signature before releasing tokens). Some validations are performed before calling Bridge functions, such as checking that the Validator and ERC20Safe contracts are set.
+* **ERC20 Safe Handler** - The contract is built on top of ERC20Safe and performs all actions related to the token bridging. It contains all necessary mappings with the information about tokens that go through the contract. This contract is responsible for token wrapping.
+* **Validator** - The contract is responsible for verifying signatures from the trusted validator using [EIP712](https://eips.ethereum.org/EIPS/eip-712)
+
+> Each contract implements its respective interface, so you can implement the logic of the bridge on your own.
+
+#### Order of the contracts
+The order of the contracts is as follows:
+
+1. Bridge is deployed
+2. ERC20 Safe Handler is deployed with Bridge address as the constructor args.
+3. Validator deployed
+4. Bridge sets ERC20 Safe Handler address
+5. Bridge sets Validator address
+
+> If the Validator or ERC20 Safe are not set, users will not be able to use the bridge.
+## User Flow Diagram
   ![user-flow](./diagrams/user-flow.png)
-#### User flow
 
 ## Install
 
