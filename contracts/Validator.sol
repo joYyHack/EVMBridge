@@ -9,10 +9,23 @@ import {TokenType} from "./bridge/utils/enums.sol";
 
 import "hardhat/console.sol";
 
+/**
+ * @title Validator
+ * @author joYyHack
+ * @notice Validator is an implementation of the IValidator interface
+ * that verifies token withdrawal requests and emits an event upon successful verification.
+ * @dev Inherits from EIP712 and Context contracts from OpenZeppelin.
+ */
 contract Validator is IValidator, EIP712, Context {
+    /**
+     * @notice Constant address of the validator.
+     */
     address constant VALIDATOR_ADDRESS =
         0xe1AB69E519d887765cF0bb51D0cFFF2264B38080;
 
+    /**
+     * @notice Constant hash of the WithdrawalRequest struct.
+     */
     bytes32 internal constant WITHDRAWAL_REQ_TYPE_HASH =
         keccak256(
             abi.encodePacked(
@@ -31,10 +44,18 @@ contract Validator is IValidator, EIP712, Context {
                 ")"
             )
         );
+
+    /**
+     * @dev Mapping to store nonces for addresses.
+     */
     mapping(address => uint256) private _nonces;
 
+    /**
+     * @notice Constructor that initializes the EIP712 contract with domain information.
+     */
     constructor() EIP712("Validator", "0.1") {}
 
+    /// @inheritdoc IValidator
     function verify(WithdrawalRequest memory _req, bytes memory _sig) external {
         bytes32 digest = _hashTypedDataV4(_hash(_req));
         address signer = ECDSA.recover(digest, _sig);
@@ -58,6 +79,7 @@ contract Validator is IValidator, EIP712, Context {
         );
     }
 
+    /// @inheritdoc IValidator
     function createRequest(
         address _bridge,
         address _from,
@@ -85,10 +107,16 @@ contract Validator is IValidator, EIP712, Context {
             );
     }
 
+    /// @inheritdoc IValidator
     function getNonce(address _from) external view returns (uint256 nonce) {
         return _nonces[_from];
     }
 
+    /**
+     * @notice Internal function that hashes a WithdrawalRequest instance.
+     * @param _req The WithdrawalRequest instance to hash.
+     * @return The hash of the WithdrawalRequest instance.
+     */
     function _hash(
         WithdrawalRequest memory _req
     ) internal pure returns (bytes32) {
