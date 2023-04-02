@@ -8,6 +8,7 @@
 - [Overview](#overview)
 - [Deployments](#deployments-by-evm-chain)
 - [Diagram](#diagram)
+- [Install](#install)
 ### Overview
 
 The Bridge smart contract provides a bidirectional transfer of ERC20 tokens between EVM-compatible chains. This means that users can move their tokens from Chain A to Chain B and vice versa with ease. Additionally, the Bridge supports the ERC20 Permit standard (ERC2612), enabling gasless transactions by pre-approving token transfers. With the Bridge, users have greater flexibility and control over their tokens, eliminating the need to rely on centralized exchanges or custodians for transfers between chains.
@@ -48,6 +49,10 @@ The Bridge smart contract provides a bidirectional transfer of ERC20 tokens betw
 [0xb564990E0fD557345f4e87F10ECA0F641a557671](https://mumbai.polygonscan.com/address/0xb564990E0fD557345f4e87F10ECA0F641a557671#code)
 
 </td></tr>
-
+</table>
+  
 ### Diagram
+  ![user-flow](./diagrams/user-flow.png)
 #### User flow
+
+### Install
