@@ -17,6 +17,7 @@
 - [Usage](#usage)
 - [.ENV file](#env-file)
 - [Deploy scripts](#deploy)
+- [Notes](#notes)
 ## Overview
 
 The Bridge smart contract provides a bidirectional transfer of ERC20 tokens between EVM-compatible chains. This means that users can move their tokens from Chain A to Chain B and vice versa with ease. Additionally, the Bridge supports the ERC20 Permit standard (ERC2612), enabling gasless transactions by pre-approving token transfers. With the Bridge, users have greater flexibility and control over their tokens, eliminating the need to rely on centralized exchanges or custodians for transfers between chains.
@@ -136,3 +137,7 @@ To deploy ERC20 token and ERC20 permit token:
 ```bash
 npx hardhat run .\scripts\deployERC20.ts
 ```
+
+## Notes
+* Custom errors are not used in the contracts because require provided more clear way of writing code (in my opinion). To use custom errors some if condition must be provided.
+* The Bridge contract supports ERC20 Permits if the contract implements the EIP165 interface and if the 0x9d8ff7da selector is supported.
