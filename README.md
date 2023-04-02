@@ -9,11 +9,14 @@
 - [Deployments](#deployments-by-evm-chain)
 - [Diagram](#diagram)
 - [Install](#install)
-### Overview
+- [Usage](#usage)
+- [.ENV file](#env-file)
+- [Deploy](#deploy)
+## Overview
 
 The Bridge smart contract provides a bidirectional transfer of ERC20 tokens between EVM-compatible chains. This means that users can move their tokens from Chain A to Chain B and vice versa with ease. Additionally, the Bridge supports the ERC20 Permit standard (ERC2612), enabling gasless transactions by pre-approving token transfers. With the Bridge, users have greater flexibility and control over their tokens, eliminating the need to rely on centralized exchanges or custodians for transfers between chains.
 
-### Deployments by EVM Chain
+## Deployments by EVM Chain
 
 <table>
 <tr>
@@ -51,8 +54,57 @@ The Bridge smart contract provides a bidirectional transfer of ERC20 tokens betw
 </td></tr>
 </table>
   
-### Diagram
+## Diagram
   ![user-flow](./diagrams/user-flow.png)
 #### User flow
 
-### Install
+## Install
+
+```bash
+git clone https://github.com/joYyHack/EVMBridge.git
+npm install
+npx hardhat clean
+npx hardhat compile
+```
+
+## Usage
+
+To run hardhat tests written in typescript:
+
+```bash
+npx hardhat test
+```
+To run hardhat coverage:
+
+```bash
+npx hardhat coverage --config ./hardhat-coverage.config.ts
+```
+
+## .ENV file
+
+In order to deploy contracts to the EVM network or verify them, you need to set up the .env file with the specified API keys and private keys. Here is an example .env file:
+```env
+IS_ENV_SET=false
+
+ALCHEMY_SEPOLIA_API_KEY="api-key"
+ALCHEMY_MUMBAI_API_KEY="api-key"
+
+ALICE_PRIV_KEY="priv-key"
+BRIDGE_OWNER_PRIV_KEY="priv-key"
+VALIDATOR_OWNER_PRIV_KEY="priv-key"
+
+ETHEREUM_ETHERSCAN_API_KEY="api-key"
+POLYGON_ETHERSCAN_API_KEY="api-key"
+```
+> #### If you have set the .env file don't forget to switch `IS_ENV_SET` to true
+
+## Deploy
+To deploy Bridge with all dependencies:
+```bash
+npx hardhat run .\scripts\deploy.ts
+```
+
+To deploy ERC20 token and ERC20 permit token:
+```bash
+npx hardhat run .\scripts\deployERC20.ts
+```
