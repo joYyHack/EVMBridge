@@ -1,13 +1,11 @@
-import { ethers } from "hardhat";
 import { constants } from "ethers";
-import { parseEther, formatEther } from "ethers/lib/utils";
-import { privKey } from "./utils/encoding";
-import { faucet } from "./utils/faucet";
+import { parseEther } from "ethers/lib/utils";
+import { ethers } from "hardhat";
 import { SourceERC20, SourceERC20Permit } from "../typechain-types";
 
 async function main() {
   const network = await ethers.provider.getNetwork();
-  const [bridgeOwner, alice] = await ethers.getSigners();
+  const [bridgeOwner, validatorOwner, alice] = await ethers.getSigners();
 
   const bridgeFactory = await ethers.getContractFactory("Bridge", bridgeOwner);
   const bridge = await bridgeFactory.deploy();
@@ -22,7 +20,7 @@ async function main() {
 
   const validatorFactory = await ethers.getContractFactory(
     "Validator",
-    bridgeOwner
+    validatorOwner
   );
   const validator = await validatorFactory.deploy();
   await validator.deployed();

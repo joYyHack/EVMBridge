@@ -1,13 +1,13 @@
 import {
+  impersonateAccount,
   loadFixture,
   setCode,
-  impersonateAccount,
   setStorageAt,
 } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber, constants } from "ethers";
 import { parseEther, randomBytes } from "ethers/lib/utils";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import {
   Bridge,
   IERC20SafeHandler,
@@ -30,10 +30,7 @@ import {
   signWithdrawalRequest,
 } from "./utils/encoding";
 import { faucet } from "./utils/faucet";
-import {
-  getDepositedAmountFromERC20Safe,
-  setTokenInfoForERC20Safe as getTokenInfoForERC20Safe,
-} from "./utils/storageGetterSetter";
+import { setTokenInfoForERC20Safe as getTokenInfoForERC20Safe } from "./utils/storageGetterSetter";
 
 describe("Bridge base logic", function () {
   //const ONE_THOUSAND_TOKENS = parseEther((1_000).toString());
@@ -45,7 +42,7 @@ describe("Bridge base logic", function () {
   const bridgeOwner = new ethers.Wallet(privKey("666"), provider);
   const alice = new ethers.Wallet(privKey("a11ce"), provider);
   const bob = new ethers.Wallet(privKey("b0b"), provider);
-  const validatorWallet = new ethers.Wallet(privKey("dead"), provider);
+  const validatorOwner = new ethers.Wallet(privKey("dEad"), provider);
   const randomWallet = new ethers.Wallet(randomBytes(32), provider);
 
   let source_bridge: Bridge;
@@ -69,7 +66,7 @@ describe("Bridge base logic", function () {
   let wrappedReenterERC20Permit: ReenterWrappedERC20Permit;
 
   async function initialBalance() {
-    for (const wallet of [bridgeOwner, alice, bob, validatorWallet]) {
+    for (const wallet of [bridgeOwner, alice, bob, validatorOwner]) {
       await faucet(wallet.address, provider);
     }
   }
@@ -95,7 +92,7 @@ describe("Bridge base logic", function () {
 
     const validatorFactory = await ethers.getContractFactory(
       "Validator",
-      bridgeOwner
+      validatorOwner
     );
     const source_validator = await validatorFactory.deploy();
     await source_validator.deployed();
@@ -163,7 +160,7 @@ describe("Bridge base logic", function () {
 
     const validatorFactory = await ethers.getContractFactory(
       "Validator",
-      bridgeOwner
+      validatorOwner
     );
     const target_validator = await validatorFactory.deploy();
     await target_validator.deployed();
@@ -285,7 +282,7 @@ describe("Bridge base logic", function () {
     } = await deposited());
 
     const request = createWithdrawalRequest(
-      validatorWallet.address,
+      validatorOwner.address,
       target_bridge.address,
       alice.address,
       ONE_HUNDRED_TOKENS,
@@ -299,7 +296,7 @@ describe("Bridge base logic", function () {
     );
 
     const signature = await signWithdrawalRequest(
-      validatorWallet,
+      validatorOwner,
       target_validator.address,
       request
     );
@@ -327,7 +324,7 @@ describe("Bridge base logic", function () {
     );
 
     const permitRequest = createWithdrawalRequest(
-      validatorWallet.address,
+      validatorOwner.address,
       target_bridge.address,
       alice.address,
       ONE_HUNDRED_TOKENS,
@@ -341,7 +338,7 @@ describe("Bridge base logic", function () {
     );
 
     const permitSignature = await signWithdrawalRequest(
-      validatorWallet,
+      validatorOwner,
       target_validator.address,
       permitRequest
     );
@@ -813,7 +810,7 @@ describe("Bridge base logic", function () {
     it("Bridge: Alice should be able to withdraw newly deployed wrapped tokens on the target chain", async () => {
       // assume that validator checked all conditions and everything is fine
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -827,7 +824,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         request
       );
@@ -880,7 +877,7 @@ describe("Bridge base logic", function () {
     it("Bridge: Alice should be able to withdraw newly deployed wrapped PERMIT tokens on the target chain", async () => {
       // assume that validator checked all conditions and everything is fine
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -894,7 +891,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         request
       );
@@ -949,7 +946,7 @@ describe("Bridge base logic", function () {
     it("Bridge: If Alice withdraws token multiple times the first one the wrapped token should be created, next one the existed token should be used", async () => {
       // assume that validator checked all conditions and everything is fine
       const first_request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS.div(2),
@@ -963,7 +960,7 @@ describe("Bridge base logic", function () {
       );
 
       const first_signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         first_request
       );
@@ -1007,7 +1004,7 @@ describe("Bridge base logic", function () {
       ).to.be.equal(wrappedERC20.address);
 
       const second_request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS.div(2),
@@ -1021,7 +1018,7 @@ describe("Bridge base logic", function () {
       );
 
       const second_signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         second_request
       );
@@ -1049,7 +1046,7 @@ describe("Bridge base logic", function () {
     });
     it("Bridge: Revert on attempt to withdraw when ERC20 safe handler is not set", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1063,7 +1060,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         request
       );
@@ -1089,7 +1086,7 @@ describe("Bridge base logic", function () {
     });
     it("Bridge: Revert on attempt to withdraw when Validator is not set", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1103,7 +1100,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         request
       );
@@ -1145,7 +1142,7 @@ describe("Bridge base logic", function () {
       ).revertedWith("ERC20SafeHandler: zero address");
 
       const requestZeroAmount = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ZERO,
@@ -1159,7 +1156,7 @@ describe("Bridge base logic", function () {
       );
 
       const signatureZeroAmount = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         requestZeroAmount
       );
@@ -1180,7 +1177,7 @@ describe("Bridge base logic", function () {
     it("Bridge: Revert on a reentrant call to withdraw", async () => {
       // assume that validator checked all conditions and everything is fine
       const first_request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS.div(2),
@@ -1194,7 +1191,7 @@ describe("Bridge base logic", function () {
       );
 
       const first_signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         first_request
       );
@@ -1225,7 +1222,7 @@ describe("Bridge base logic", function () {
         await ethers.getContractAt("ReenterWrappedERC20", wrappedERC20Address);
 
       const second_request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS.div(2),
@@ -1239,7 +1236,7 @@ describe("Bridge base logic", function () {
       );
 
       const second_signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         second_request
       );
@@ -1520,7 +1517,7 @@ describe("Bridge base logic", function () {
     it("Bridge: Alice should be able to release native tokens on the source chain", async () => {
       // assume that validator checked all conditions and everything is fine
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         source_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1534,7 +1531,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         source_validator.address,
         request
       );
@@ -1572,7 +1569,7 @@ describe("Bridge base logic", function () {
     });
     it("Bridge: Revert on attempt to release when ERC20 safe handler is not set", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         source_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1586,7 +1583,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         source_validator.address,
         request
       );
@@ -1605,7 +1602,7 @@ describe("Bridge base logic", function () {
     });
     it("Bridge: Revert on attempt to release when Validator is not set", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         source_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1619,7 +1616,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         source_validator.address,
         request
       );
@@ -1648,7 +1645,7 @@ describe("Bridge base logic", function () {
       ).revertedWith("ERC20SafeHandler: zero address");
 
       const requestZeroAmount = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         source_bridge.address,
         alice.address,
         ZERO,
@@ -1662,7 +1659,7 @@ describe("Bridge base logic", function () {
       );
 
       const signatureZeroAmount = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         source_validator.address,
         requestZeroAmount
       );
@@ -1686,7 +1683,7 @@ describe("Bridge base logic", function () {
     });
     it("ERC20SafeHandler: Revert on attempt to release more tokens than locked", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         source_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS.mul(2),
@@ -1700,7 +1697,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         source_validator.address,
         request
       );
@@ -1715,7 +1712,7 @@ describe("Bridge base logic", function () {
     });
     it("Bridge: Revert on a reentrant call to release", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         source_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1729,7 +1726,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         source_validator.address,
         request
       );
@@ -1863,7 +1860,7 @@ describe("Bridge base logic", function () {
     });
     it("Validator: Revert if nonces are not the same", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1877,7 +1874,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         request
       );
@@ -1897,7 +1894,7 @@ describe("Bridge base logic", function () {
     });
     it("Validator: Revert if verify function is called not by a BRIDGE contract", async () => {
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -1911,7 +1908,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         request
       );
@@ -2037,7 +2034,7 @@ describe("Bridge base logic", function () {
       );
 
       const request = createWithdrawalRequest(
-        validatorWallet.address,
+        validatorOwner.address,
         target_bridge.address,
         alice.address,
         ONE_HUNDRED_TOKENS,
@@ -2051,7 +2048,7 @@ describe("Bridge base logic", function () {
       );
 
       const signature = await signWithdrawalRequest(
-        validatorWallet,
+        validatorOwner,
         target_validator.address,
         request
       );
