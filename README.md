@@ -75,6 +75,8 @@ The order of the contracts is as follows:
 5. Bridge sets Validator address
 
 > If the Validator or ERC20 Safe are not set, users will not be able to use the bridge.
+
+**❗❗The EVMBridge contract works bidirectionally, allowing assets to be transferred between two EVM-compatible blockchains. This means that users can transfer assets from one chain to the other and vice versa.**
 ## User Flow Diagram
   ![user-flow](./diagrams/user-flow.png)
 
