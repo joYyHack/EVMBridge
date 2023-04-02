@@ -140,4 +140,4 @@ npx hardhat run .\scripts\deployERC20.ts
 
 ## Notes
 * Custom errors are not used in the contracts because require provided more clear way of writing code (in my opinion). To use custom errors some if condition must be provided.
-* The Bridge contract supports ERC20 Permits if the contract implements the EIP165 interface and if the 0x9d8ff7da selector is supported.
+* The Bridge contract supports ERC20 Permits if the contract implements the EIP165 interface and if the `0x9d8ff7da` selector is supported.
