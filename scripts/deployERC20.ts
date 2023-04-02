@@ -1,11 +1,8 @@
+import { formatEther, parseEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
-import { constants } from "ethers";
-import { parseEther, formatEther } from "ethers/lib/utils";
-import { privKey } from "./utils/encoding";
-import { faucet } from "./utils/faucet";
 
 async function main() {
-  const [_, alice] = await ethers.getSigners();
+  const [_, __, alice] = await ethers.getSigners();
 
   const erc20Factory = await ethers.getContractFactory("RandomERC20", alice);
   const ERC20 = await erc20Factory.deploy("Mumbai", "MUM");
