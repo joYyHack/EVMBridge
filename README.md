@@ -10,6 +10,8 @@
 - [Bridge structure](#bridge-structure)
   - [Bridge parts](#bridge-consists-of-3-main-parts) 
   - [Bridge order](#order-of-the-contracts) 
+  - [NatSpec](#natspec)
+  - [Bidirectional](#bidirectional)
 - [User flow diagram](#user-flow-diagram)
 - [Install](#install)
 - [Usage](#usage)
@@ -76,6 +78,10 @@ The order of the contracts is as follows:
 
 > If the Validator or ERC20 Safe are not set, users will not be able to use the bridge.
 
+#### NatSpec
+**❗All of the contracts in this project have NatSpec comments, providing more detailed information about their functionality. For more specific information about a function's performance, please refer to the relevant contract.**
+
+#### Bidirectional
 **❗❗The EVMBridge contract works bidirectionally, allowing assets to be transferred between two EVM-compatible blockchains. This means that users can transfer assets from one chain to the other and vice versa.**
 ## User Flow Diagram
   ![user-flow](./diagrams/user-flow.png)
