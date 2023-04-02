@@ -3,25 +3,23 @@ pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./bridge/interfaces/IValidator.sol";
 import {TokenType} from "./bridge/utils/enums.sol";
-
-import "hardhat/console.sol";
 
 /**
  * @title Validator
  * @author joYyHack
  * @notice Validator is an implementation of the IValidator interface
  * that verifies token withdrawal requests and emits an event upon successful verification.
- * @dev Inherits from EIP712 and Context contracts from OpenZeppelin.
+ * @dev Inherits from EIP712, Context and Ownable contracts from OpenZeppelin.
  */
-contract Validator is IValidator, EIP712, Context {
+contract Validator is IValidator, EIP712, Context, Ownable {
     /**
-     * @notice Constant address of the validator.
+     * @dev Address of the validator, immutable after construction.
      */
-    address constant VALIDATOR_ADDRESS =
-        0xe1AB69E519d887765cF0bb51D0cFFF2264B38080;
+    address immutable VALIDATOR_ADDRESS;
 
     /**
      * @notice Constant hash of the WithdrawalRequest struct.
@@ -51,9 +49,11 @@ contract Validator is IValidator, EIP712, Context {
     mapping(address => uint256) private _nonces;
 
     /**
-     * @notice Constructor that initializes the EIP712 contract with domain information.
+     * @notice Constructor that initializes the EIP712 contract with domain information and sets the owner as the validator.
      */
-    constructor() EIP712("Validator", "0.1") {}
+    constructor() EIP712("Validator", "0.1") {
+        VALIDATOR_ADDRESS = owner();
+    }
 
     /// @inheritdoc IValidator
     function verify(WithdrawalRequest memory _req, bytes memory _sig) external {
