@@ -3,6 +3,7 @@ import { HardhatUserConfig, subtask } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 
 import { config as dotEnvConfig } from "dotenv";
+import { privKey } from "./scripts/utils/encoding";
 dotEnvConfig();
 
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(
@@ -31,20 +32,25 @@ const config: HardhatUserConfig = {
   networks: {
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_API_KEY}`,
-
-      accounts: [
-        process.env.BRIDGE_OWNER_PRIV_KEY as string,
-        process.env.VALIDATOR_OWNER_PRIV_KEY as string,
-        process.env.ALICE_PRIV_KEY as string,
-      ],
+      accounts:
+        process.env.IS_ENV_SET?.toLowerCase() === "true"
+          ? [
+              process.env.BRIDGE_OWNER_PRIV_KEY as string,
+              process.env.VALIDATOR_OWNER_PRIV_KEY as string,
+              process.env.ALICE_PRIV_KEY as string,
+            ]
+          : [],
     },
     mumbai: {
       url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_MUMBAI_API_KEY}`,
-      accounts: [
-        process.env.BRIDGE_OWNER_PRIV_KEY as string,
-        process.env.VALIDATOR_OWNER_PRIV_KEY as string,
-        process.env.ALICE_PRIV_KEY as string,
-      ],
+      accounts:
+        process.env.IS_ENV_SET?.toLowerCase() === "true"
+          ? [
+              process.env.BRIDGE_OWNER_PRIV_KEY as string,
+              process.env.VALIDATOR_OWNER_PRIV_KEY as string,
+              process.env.ALICE_PRIV_KEY as string,
+            ]
+          : [],
     },
   },
   etherscan: {
